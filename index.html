@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recognition</title>
+</head>
+<body>
+    <button id="startRecording">Start Recording</button>
+    <div id="result"></div>
+    
+    <script>
+        const startRecordingButton = document.getElementById('startRecording');
+        const resultDiv = document.getElementById('result');
+
+        startRecordingButton.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(stream);
+                let audioChunks = [];
+
+                recorder.addEventListener('dataavailable', event => {
+                    audioChunks.push(event.data);
+                });
+
+                recorder.addEventListener('stop', async () => {
+                    const audioBlob = new Blob(audioChunks);
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob);
+
+                    const response = await fetch('process_audio.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    resultDiv.innerText = data.transcription;
+                });
+
+                recorder.start();
+
+                setTimeout(() => {
+                    recorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
+                }, 5000); // Stop recording after 5 seconds
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
